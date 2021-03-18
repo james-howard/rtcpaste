@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>RTC Paste</title>
+    <style>
+        html, body {
+            font-family: -apple-system;
+        }
+        video {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <div id="sender" style="display: none;">
+        <p>
+            Offer:
+            <input type="text" id="offer1"><button id="copyOffer1">Copy</button>
+        </p>
+        <p>
+            Answer:
+            <input type="text" id="answer1"><button id="pasteAnswer1">Paste</button>
+        </p>
+        <div>
+            <p>Video Preview:</p>
+            <video width="320" height="240" id="preview" autoplay muted></video>
+        </div>
+    </div>
+    <div id="receiver" style="display: none;">
+        <p>
+            Offer:
+            <input type="text" id="offer2"><button id="pasteOffer2">Paste</button>
+        </p>
+        <p>
+            Answer:
+            <input type="text" id="answer2"><button id="copyAnswer2">Copy</button>
+        </p>
+        <div>
+            <p>Remote Video:</p>
+            <video width="320" height="240" id="remote" playsinline autoplay muted></video>
+        </div>
+    </div>
+
+    <div id="modes">
+        <button id="startSender">Be Sender</button>
+        <button id="startReceiver">Be Receiver</button>
+    </div>
+    
+    <p>
+        This page demonstrates a WebKit bug on iOS where receiving video
+        via WebRTC is blocked by the clipboard UI, leading to memory growth
+        (video frames keep getting received and decoded into IOSurfaces, but
+        they never get consumed / released until the paste UI is dismissed).
+    <p>
+    
+    <p>
+        <b>Usage:</b><br>Have one Mac with a webcam and one iOS device (running iOS 14.4 or later)
+        on the same local network. Or one Mac running the iOS Simulator works too.
+    </p>
+    <p>
+        <ol>
+            <li>Setup and Signaling
+            <ol>
+                <li>From the Mac side, open this page in Safari and click the "Be Sender" button. Agree to let the page access your camera.</li>
+                <li>From the iOS side, open this page in Safari and tap the "Be Receiver" button.</li>
+                <li>From the Mac side, copy the offer text and paste it into the iOS offer form.
+                    <ul>
+                        <li><i>Tip: Use Universal Clipboard</i></li>
+                    </ul>
+                </li>
+                <li>From the iOS side, copy the answer text and paste it into the Mac answer form.</li>
+                <li>A video should appear on the iOS side, streamed from the Mac.</li>
+            </ol>
+            </li>
+            
+            <li>Use Instruments "Activity Monitor" to track memory usage on the iOS device (or simulator)</li>
+            <li>From the iOS side, tap on the "Paste" button again, but don't yet tap on the "Paste" callout that appears, just let it sit there.</li>
+            <li>Watch the memory use grow!</li>
+        </ol>
+    </p>
+    
+<script language="javascript">
+async function sender() {
+    document.getElementById('sender').style.display = '';
+    document.getElementById('modes').style.display = 'none';
+    
+    const stream = await navigator.mediaDevices.getUserMedia({video: true});
+    console.log('Received local stream');
+    document.getElementById('preview').srcObject = stream;
+    
+    const peer = new RTCPeerConnection();
+    const track = stream.getVideoTracks()[0];
+    peer.addTrack(track, stream);
+    peer.addTransceiver('video', {'direction': 'sendonly'});
+    const offer = await peer.createOffer();
+    console.log('Created offer', peer);
+    await peer.setLocalDescription(offer);
+    const sdp = JSON.stringify(peer.localDescription);
+    document.getElementById('offer1').value = sdp;
+    
+    document.getElementById('copyOffer1').addEventListener('click', evt => {
+        navigator.clipboard.writeText(sdp);
+    });
+    
+    async function handleAnswer(answerText) {
+        const answer = new RTCSessionDescription(JSON.parse(answerText));
+        console.log('handleAnswer', answer);
+        try {
+            peer.setRemoteDescription(answer);
+        } catch (e) {
+            console.error('setRemoteDescription', e);
+        }
+    }
+    
+    document.getElementById('answer1').addEventListener('change', evt => {
+        handleAnswer(evt.target.value);
+    });
+    
+    document.getElementById('pasteAnswer1').addEventListener('click', async evt => {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('answer1').value = text;
+        handleAnswer(text);
+    });
+}
+
+async function receiver() {
+    document.getElementById('receiver').style.display = '';
+    document.getElementById('modes').style.display = 'none';
+    
+    const peer = new RTCPeerConnection();
+    peer.addTransceiver('video', {'direction': 'recvonly'});
+    peer.addEventListener('track', evt => {
+        let video = document.getElementById('remote');
+        console.log('Received track evt', evt);
+        let stream = evt.streams[0];
+        if (stream && video.srcObject !== stream) {
+            console.log('Received remote stream', stream);
+            video.srcObject = stream;
+            video.play();
+        }
+    });
+    
+    async function handleOffer(offer) {
+        await peer.setRemoteDescription(new RTCSessionDescription(JSON.parse(offer)));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        const sdp = JSON.stringify(peer.localDescription);
+        document.getElementById('answer2').value = sdp;
+    }
+    
+    document.getElementById('offer2').addEventListener('change', async (evt) => {
+        console.log('offer2 changed');
+        const offerText = evt.target.value;
+        handleOffer(offerText);
+    });
+    
+    document.getElementById('pasteOffer2').addEventListener('click', async evt => {
+        let text = await navigator.clipboard.readText();        
+        document.getElementById('offer2').value = text;
+        handleOffer(text);
+    });
+    
+    document.getElementById('copyAnswer2').addEventListener('click', async (evt) => {
+        navigator.clipboard.writeText(document.getElementById('answer2').value);
+    });
+}
+
+document.getElementById('startSender').addEventListener('click', sender);
+document.getElementById('startReceiver').addEventListener('click', receiver);
+</script>
+</body>
+</html>
