@@ -56,27 +56,27 @@
     <p>
     
     <p>
-        <b>Usage:</b><br>Have one Mac with a webcam and one iOS device (running iOS 14.4 or later)
-        on the same local network. Or one Mac running the iOS Simulator works too.
+        <b>Usage:</b><br>Have a device with a webcam. You can use one Mac and two Safari windows for this, or one Mac and one iOS device on the same local network.
     </p>
     <p>
         <ol>
             <li>Setup and Signaling
             <ol>
-                <li>From the Mac side, open this page in Safari and click the "Be Sender" button. Agree to let the page access your camera.</li>
-                <li>From the iOS side, open this page in Safari and tap the "Be Receiver" button.</li>
-                <li>From the Mac side, copy the offer text and paste it into the iOS offer form.
+                <li>Open this page in Safari and click the "Be Sender" button. Agree to let the page access your camera.</li>
+                <li>Open this page in a second Safari window or on an iOS Safari tab and click/tap the "Be Receiver" button.</li>
+                <li>From the sender side, copy the offer text and paste it into the receiver offer form.
                     <ul>
-                        <li><i>Tip: Use Universal Clipboard</i></li>
+                        <li><i>Tip: Use Universal Clipboard to copy to iOS device</i></li>
                     </ul>
                 </li>
-                <li>From the iOS side, copy the answer text and paste it into the Mac answer form.</li>
-                <li>A video should appear on the iOS side, streamed from the Mac.</li>
+                <li>From the receiver side, quickly copy the answer text and paste it into the sender answer form.</li>
+                <li>A video should appear on the receiver side, streamed from the sender.</li>
             </ol>
             </li>
             
-            <li>Use Instruments "Activity Monitor" to track memory usage on the iOS device (or simulator)</li>
-            <li>From the iOS side, copy some text from another app or site, and then tap on the "Paste" button again, but don't yet tap on the "Paste" callout that appears, just let it sit there.</li>
+            <li>Use Instruments "Activity Monitor" to track memory usage on the receiving side</li>
+            <li>If the receiver is on a Mac you can put this in a terminal window <code>while true; do vmmap --summary pid-of-receiver-page | grep IOSurface; sleep 5; done</code></li>
+            <li>From the receiver side, copy some text <b>from another app or site</b>, and then tap on the "Paste" button again to bring up the paste callout, but don't yet tap on the "Paste" callout that appears, just let it sit there.</li>
             <li>Watch the memory use grow!</li>
         </ol>
     </p>
