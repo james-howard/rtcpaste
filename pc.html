@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="author" content="James Howard">
+    <title>RTC Paste</title>
+    <style>
+        html, body {
+            font-family: -apple-system;
+        }
+        video {
+            background-color: black;
+        }
+        table, th, td {
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <button id="paste">Paste</button>
+    <table>
+        <tr><th>Sender</th><th>Receiver</th></tr>
+        <tr>
+            <td><video width="320" height="240" id="preview" autoplay muted></video></td>
+            <td><video width="320" height="240" id="remote" playsinline autoplay muted></video></td>
+        </tr>
+    </table>
+    
+<script language="javascript">
+async function setup() {
+    const stream = await navigator.mediaDevices.getUserMedia({video: true});
+    console.log('Received local stream');
+    document.getElementById('preview').srcObject = stream;
+    
+    const senderPeer = new RTCPeerConnection();
+    const track = stream.getVideoTracks()[0];
+    senderPeer.addTrack(track, stream);
+    senderPeer.addTransceiver('video', {'direction': 'sendonly'});
+    const offer = await senderPeer.createOffer();
+    console.log('Created offer', offer);
+    await senderPeer.setLocalDescription(offer);
+    
+    const receiverPeer = new RTCPeerConnection();
+    receiverPeer.addTransceiver('video', {'direction': 'recvonly'});
+    receiverPeer.addEventListener('track', evt => {
+        let video = document.getElementById('remote');
+        console.log('Received track evt', evt);
+        let stream = evt.streams[0];
+        if (stream && video.srcObject !== stream) {
+            console.log('Received remote stream', stream);
+            video.srcObject = stream;
+            video.play();
+        }
+    });
+    await receiverPeer.setRemoteDescription(senderPeer.localDescription);
+    const answer = await receiverPeer.createAnswer();
+    await receiverPeer.setLocalDescription(answer);
+    await senderPeer.setRemoteDescription(receiverPeer.localDescription);
+    
+    document.getElementById('paste').addEventListener('click', async evt => {
+        const text = await navigator.clipboard.readText();
+        console.log("Received paste", text);
+    });
+}
+
+setup();
+</script>
+</body>
+</html>
